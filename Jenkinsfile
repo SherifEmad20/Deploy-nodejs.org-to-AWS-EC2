@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         USER_CREDENTIALS = credentials('docker_account')
-        // DOCKER_IMAGE = "node-docker:v1"
-        DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
+        DOCKER_IMAGE = "node-docker:v10"
+        // DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
         DOCKER_USERNAME = "${USER_CREDENTIALS_USR}"
         DOCKER_PASSWORD = "${USER_CREDENTIALS_PSW}"
 

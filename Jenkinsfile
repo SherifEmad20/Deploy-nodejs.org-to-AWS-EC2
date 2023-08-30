@@ -101,25 +101,25 @@ pipeline {
             }
         }
 
-        // stage('Create ECR'){
-        //     steps {
-        //         dir("./terraform/ECR"){
-        //             sh 'terraform init'
-        //             sh "terraform plan"
-        //             sh 'terraform destroy --auto-approve'
-        //             sh 'terraform apply --auto-approve'
+        stage('Create ECR'){
+            steps {
+                dir("./terraform/ECR"){
+                    sh 'terraform init'
+                    sh "terraform plan"
+                    sh 'terraform destroy --auto-approve'
+                    sh 'terraform apply --auto-approve'
 
 
-        //             sh """
-        //                 sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" pushToECR-template.sh > pushToECR.sh
-        //             """
+                    sh """
+                        sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" pushToECR-template.sh > pushToECR.sh
+                    """
 
-        //             sh 'chmod +x pushToECR.sh'
-        //             sh "./pushToECR.sh"
+                    sh 'chmod +x pushToECR.sh'
+                    sh "./pushToECR.sh"
 
-        //         }
-        //     }
-        // }
+                }
+            }
+        }
 
 
             stage("Create EC2") {

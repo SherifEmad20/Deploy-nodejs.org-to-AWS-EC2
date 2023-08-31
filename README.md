@@ -77,7 +77,7 @@ npx turbo serve
     # Using jenkins global credentials
     environment {
         USER_CREDENTIALS = credentials('docker_account')
-        DOCKER_IMAGE = "node-docker:v-${BUILD_ID}"
+        DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
         DOCKER_USERNAME = "${USER_CREDENTIALS_USR}"
         DOCKER_PASSWORD = "${USER_CREDENTIALS_PSW}"
 
@@ -148,7 +148,6 @@ npx turbo serve
                 }
            }
         }
-
 ```
 - stage(4) Checking for quality gates as if project doesn't pass we want to fail the following stages
 ```diff
@@ -205,7 +204,7 @@ USER root
 RUN chown -R node:node /app
 
 # Allow write access to the specific directories
-RUN chmod -R 777 /app/public /app/.next
+RUN chmod -R 777 /app/public 
 
 USER node
 
@@ -245,14 +244,12 @@ CMD [ "npx", "turbo", "serve" ]
                     sh 'terraform destroy --auto-approve'
                     sh 'terraform apply --auto-approve'
 
-
                     sh """
                         sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" pushToECR-template.sh > pushToECR.sh
                     """
 
                     sh 'chmod +x pushToECR.sh'
                     sh "./pushToECR.sh"
-
                 }
             }
         }
@@ -276,19 +273,23 @@ docker push $ecr_repo:$MOD_DOCKER_IMG
 ```
 - stage(8) Create the EC2 instance to deploy to
 ```diff
-        stage("Create EC2") {
+            stage("Create EC2") {
             when {
-                branch 'master'
+                branch 'dev'
             }
             steps {
                 dir("./terraform/EC2") {
-                    sh """
-                        sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" dockerRun-template.sh > dockerRun.sh
-                    """
-                    sh 'terraform init'
-                    sh "terraform plan"
-                    sh 'terraform destroy --auto-approve'
-                    sh 'terraform apply --auto-approve'
+                    script {
+                        def ecr_repo = sh(script: 'cd ../ECR && terraform output -raw ecr_url', returnStdout: true).trim()
+                        
+                        sh """
+                            sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" -e "s|ECR_REPO|${ecr_repo}|g" dockerRun-template.sh > dockerRun.sh
+                        """
+                        sh 'terraform init'
+                        sh 'terraform plan'
+                        sh 'terraform destroy --auto-approve'
+                        sh 'terraform apply --auto-approve'
+                    }
                 }
             }
 
@@ -299,10 +300,9 @@ docker push $ecr_repo:$MOD_DOCKER_IMG
 
                 failure {
                     dir("./terraform/EC2") {
-                    sh 'terraform destroy --auto-approve'
+                        sh 'terraform destroy --auto-approve'
                     }
                 }
-                
             }
         }
 -- dockerRun.sh ------------------------------
@@ -321,34 +321,70 @@ aws configure set aws_access_key_id ACCESS_KEY
 aws configure set aws_secret_access_key SECRET_KEY
 
 sudo chmod 666 /var/run/docker.sock
-
+ 
 aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin ECR_REPO
 
-docker pull ECR_REPO:node-18-alpine
+MOD_DOCKER_IMG=$(echo IMG_NAME | sed "s|:|-|g")
+
+docker pull ECR_REPO:$MOD_DOCKER_IMG
+
+docker run -d -p 3000:3000 ECR_REPO:$MOD_DOCKER_IMG
 -- -------------------------------------------
 ```
 - stage(9) Test the deployment to check if the image is running
 ```diff
         stage("Smoke test on deployment") {
             when {
-                branch 'master'
+                branch 'dev'
             }
+
             steps {
                 dir("./terraform/EC2") {
-                    sh 'chmod +x smokeTest.sh'
-                    sh "./smokeTest.sh"
+                    script {
+                        def ecr_repo = sh(script: 'cd ../ECR && terraform output -raw ecr_url', returnStdout: true).trim()
+                        
+                        sh """
+                            sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" -e "s|ECR_REPO|${ecr_repo}|g" dockerRun-template.sh > dockerRun.sh
+                        """
+                        sh 'terraform init'
+                        sh 'terraform plan'
+                        sh 'terraform destroy --auto-approve'
+                        sh 'terraform apply --auto-approve'
+                    }
                 }
             }
+
             post {
                 success {
                     echo "Smoke test successful"
                 }
+
                 failure {
                     echo "Public IP not available yet. Please wait and try again later."
                 }
 
             }
         }
+-- somkeTest.sh script ---------------------------------------------
+#! /bin/bash
+
+echo "Waiting for application to run..."
+
+sleep 10
+
+# Get the public IP of the AWS EC2 instance
+
+# Curl to the public IP
+while true; do
+    curl_result=$(curl "http://PUBLIC_IP:3000") && break  # Break the loop on successful connection
+    sleep 120
+done
+
+
+# Display the result
+echo "Curl Result:"
+echo "$curl_result"
+-- -----------------------------------------------------------------
 ```
 ### ECR main.tf breakdown
 ### Provider

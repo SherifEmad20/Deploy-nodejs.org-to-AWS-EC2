@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         USER_CREDENTIALS = credentials('docker_account')
-        // DOCKER_IMAGE = "node-docker:v1"
-        DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
+        DOCKER_IMAGE = "node-docker:v2"
+        // DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
         DOCKER_USERNAME = "${USER_CREDENTIALS_USR}"
         DOCKER_PASSWORD = "${USER_CREDENTIALS_PSW}"
 
@@ -162,8 +162,17 @@ pipeline {
 
         //     steps {
         //         dir("./terraform/EC2") {
-        //             sh 'chmod +x smokeTest.sh'
-        //             sh "./smokeTest.sh"
+        //             script {
+        //                 def ecr_repo = sh(script: 'cd ../ECR && terraform output -raw ecr_url', returnStdout: true).trim()
+                        
+        //                 sh """
+        //                     sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" -e "s|ECR_REPO|${ecr_repo}|g" dockerRun-template.sh > dockerRun.sh
+        //                 """
+        //                 sh 'terraform init'
+        //                 sh 'terraform plan'
+        //                 sh 'terraform destroy --auto-approve'
+        //                 sh 'terraform apply --auto-approve'
+        //             }
         //         }
         //     }
 

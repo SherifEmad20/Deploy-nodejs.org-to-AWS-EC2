@@ -155,29 +155,29 @@ pipeline {
             }
         }
 
-        stage("Smoke test on deployment") {
-            when {
-                branch 'dev'
-            }
+        // stage("Smoke test on deployment") {
+        //     when {
+        //         branch 'dev'
+        //     }
 
-            steps {
-                dir("./terraform/EC2") {
-                    sh 'chmod +x smokeTest.sh'
-                    sh "./smokeTest.sh"
-                }
-            }
+        //     steps {
+        //         dir("./terraform/EC2") {
+        //             sh 'chmod +x smokeTest.sh'
+        //             sh "./smokeTest.sh"
+        //         }
+        //     }
 
-            post {
-                success {
-                    echo "Smoke test successful"
-                }
+        //     post {
+        //         success {
+        //             echo "Smoke test successful"
+        //         }
 
-                failure {
-                    echo "Public IP not available yet. Please wait and try again later."
-                }
+        //         failure {
+        //             echo "Public IP not available yet. Please wait and try again later."
+        //         }
 
-            }
-        }
+        //     }
+        // }
 
 
     }

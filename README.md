@@ -60,18 +60,16 @@ npx turbo serve
 - (10) Create a terraform IAC to configure (security group, an EC2 instance, and ECR) to deploy the
        application on it. And integrate this terraform with Jenkins Pipeline (to be provisioned using Jenkins).
 - (11) Perform smoke testing in the development environment.
-- (12)- Deploy the Node.js app to an EC2 on the machine.
-- (13)- Include a README file to explain the above steps.
+- (12) Deploy the Node.js app to an EC2 on the machine.
+- (13) Include a README file to explain the above steps.
 
 
 ### prerequisites
 - Docker
 - Terraform
-- Jenkins with docker pipeline plugin
+- Jenkins with docker pipeline plugin, and sonarqube scanner plugin
 - AWS account
 - Sonarqube server
-
-### Jenkinsfile breakdown
 
 ### Jenkinsfile breakdown:
 - environment 
@@ -162,7 +160,7 @@ npx turbo serve
             }
         }
 ```
-<img src="./Images/SonarTest.png" alt="sonarqube" />
+<img src="./Images/sonarqubeResult.png" alt="sonarqube" />
 
 - stage(5) Build docker image
 ```diff
@@ -352,7 +350,59 @@ docker pull ECR_REPO:node-18-alpine
             }
         }
 ```
-### EC2 terraform main breakdown
+### ECR main.tf breakdown
+### Provider
+```diff
+provider "aws" {
+    region = "eu-west-3"
+    access_key = var.access_key
+    secret_key = var.secret_key
+}
+```
+### Variables
+```diff
+variable image_tag_mutability {}
+
+variable env_prefix {}
+
+variable access_key {}
+
+variable secret_key {}
+-- terraform.tfvars ------------------------------------
+image_tag_mutability  = "MUTABLE"
+
+env_prefix = ["dev", "prod"] # VPC environments
+
+access_key = ""
+
+secret_key = ""
+-- ---------------------------------------------------     
+```
+### ECR resource
+```diff
+# Elastic container registry repository to push my containers to 
+# and access the containers from
+resource "aws_ecr_repository" "dev_repo" {
+  name			= "${var.env_prefix[0]}-repo"
+  image_tag_mutability  = var.image_tag_mutability
+
+  tags = {
+    Name = "${var.env_prefix[0]}-repo"
+  }
+}
+```
+### Output
+```diff
+output "ecr_url" {
+    value = try(aws_ecr_repository.dev_repo.repository_url,"")
+}
+```
+### Result
+<img src="./Images/ecrRepo.png" alt="ECR Repository">
+<img src="./Images/ercImage.png" alt="ECR Repository">
+
+
+### EC2 terraform main.tf breakdown
 
 ### Provider
 - define the cloud provider which provision the desired resources
@@ -445,6 +495,10 @@ resource "aws_route_table" "private_route_table" {
     }
 }
 ```
+### Result
+<img src="./Images/vpc.png" alt="VPC">
+
+
 ### Subnet
 - subnets are parts of the vpc with a range of ips and acts as the container for the ec2 instance
 ```diff 
@@ -466,6 +520,9 @@ resource "aws_route_table_association" "rtb-association" {
     route_table_id = aws_route_table.private_route_table.id
 }
 ```
+### Result
+<img src="./Images/subnet.png" alt="Subnet">
+
 ### EC2 instance
 - EC2 is the virtual machine instance provided by AWS which are used as the servers to host applications
 ```diff 
@@ -489,6 +546,9 @@ resource "aws_instance" "my-app-server" {
     }
 }
 ```
+### Result
+<img src="./Images/ec2.png" alt="EC2 instance">
+
 ### Security group
 - Security groups can be looked at as a firewall to the ec2 instance as it controls the connections and exposes the ports to be used publicly and blocks all request that are not defined within the group
 ```diff 
@@ -527,6 +587,9 @@ resource "aws_security_group" "myapp-sg" {
     }
 }
 ```
+### Result
+<img src="./Images/securityGroup.png" alt="EC2 instance">
+
 
 ### Outputs
 ```diff 
@@ -567,53 +630,5 @@ EOF
 }
 ```
 
-### ECR main.tf breakdown
-### Provider
-```diff
-provider "aws" {
-    region = "eu-west-3"
-    access_key = var.access_key
-    secret_key = var.secret_key
-}
-```
-### Variables
-```diff
-variable image_tag_mutability {}
-
-variable env_prefix {}
-
-variable access_key {}
-
-variable secret_key {}
--- terraform.tfvars ------------------------------------
-image_tag_mutability  = "MUTABLE"
-
-env_prefix = ["dev", "prod"] # VPC environments
-
-access_key = ""
-
-secret_key = ""
--- ---------------------------------------------------     
-```
-
-### ECR resource
-```diff
-# Elastic container registry repository to push my containers to 
-# and access the containers from
-resource "aws_ecr_repository" "dev_repo" {
-  name			= "${var.env_prefix[0]}-repo"
-  image_tag_mutability  = var.image_tag_mutability
-
-  tags = {
-    Name = "${var.env_prefix[0]}-repo"
-  }
-}
-```
-### Output
-```diff
-output "ecr_url" {
-    value = try(aws_ecr_repository.dev_repo.repository_url,"")
-}
-```
-### Simple diagram for EC2
-<img src="./Images/diagram.png" alt="Diagram"/>
+### Final result
+<img src="./Images/deployment.png" alt="nodejs.org">

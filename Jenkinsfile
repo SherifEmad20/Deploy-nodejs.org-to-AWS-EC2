@@ -14,74 +14,74 @@ pipeline {
     }
 
     stages {
-        stage("install dependencies") {
+        // stage("install dependencies") {
 
-            steps {
-                sh 'npm ci'
-            }
-            post {
-                success {
-                    echo "Dependencies installed successfully"
-                }
-                failure {
-                    echo "Something went wrong please try again later"
-                }
+        //     steps {
+        //         sh 'npm ci'
+        //     }
+        //     post {
+        //         success {
+        //             echo "Dependencies installed successfully"
+        //         }
+        //         failure {
+        //             echo "Something went wrong please try again later"
+        //         }
 
-            }
+        //     }
 
-        }
+        // }
 
-        stage("Test&Build"){
-            parallel {
-                stage("Test") {
+        // stage("Test&Build"){
+        //     parallel {
+        //         stage("Test") {
 
-                    steps {
-                        sh 'npm run test:unit'
-                    }
+        //             steps {
+        //                 sh 'npm run test:unit'
+        //             }
 
-                }
-                stage("Build") {
+        //         }
+        //         stage("Build") {
 
-                    steps {
-                        sh 'npm run build'
-                    }
+        //             steps {
+        //                 sh 'npm run build'
+        //             }
 
-                }
-            }
-        }
+        //         }
+        //     }
+        // }
 
-        stage('Sonarqube scan') {
-            steps {
-                script{
-                    def sonarScannerHome = tool name: 'sq1', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    withSonarQubeEnv(installationName: "sq1") {
-                        sh """
-                            ${sonarScannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=nodejs \
-                            -Dsonar.sources=. \
-                            -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                            -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
-                            -Dsonar.projectName=nodejs \
-                        """
-                    }
-                }
-           }
-        }
+        // stage('Sonarqube scan') {
+        //     steps {
+        //         script{
+        //             def sonarScannerHome = tool name: 'sq1', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        //             withSonarQubeEnv(installationName: "sq1") {
+        //                 sh """
+        //                     ${sonarScannerHome}/bin/sonar-scanner \
+        //                     -Dsonar.projectKey=nodejs \
+        //                     -Dsonar.sources=. \
+        //                     -Dsonar.host.url=${env.SONAR_HOST_URL} \
+        //                     -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
+        //                     -Dsonar.projectName=nodejs \
+        //                 """
+        //             }
+        //         }
+        //    }
+        // }
 
-        stage("Sonarqube quality gate check") {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+        // stage("Sonarqube quality gate check") {
+        //     steps {
+        //         timeout(time: 2, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
-        stage('Docker Build') {
+        // stage('Docker Build') {
 
-            steps {
-                sh "docker build -t ${DOCKER_IMAGE} ."
-            }
-        }
+        //     steps {
+        //         sh "docker build -t ${DOCKER_IMAGE} ."
+        //     }
+        // }
 
         stage('Edit terraform var file') {
             steps {

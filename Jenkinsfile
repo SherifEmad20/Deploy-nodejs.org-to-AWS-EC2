@@ -4,7 +4,7 @@ pipeline {
     environment {
         USER_CREDENTIALS = credentials('docker_account')
         DOCKER_IMAGE = "node-docker:v2"
-        // DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
+        //  DOCKER_IMAGE = "node-docker:v${BUILD_ID}"
         DOCKER_USERNAME = "${USER_CREDENTIALS_USR}"
         DOCKER_PASSWORD = "${USER_CREDENTIALS_PSW}"
 
@@ -14,74 +14,74 @@ pipeline {
     }
 
     stages {
-        // stage("install dependencies") {
+        stage("install dependencies") {
 
-        //     steps {
-        //         sh 'npm ci'
-        //     }
-        //     post {
-        //         success {
-        //             echo "Dependencies installed successfully"
-        //         }
-        //         failure {
-        //             echo "Something went wrong please try again later"
-        //         }
+            steps {
+                sh 'npm ci'
+            }
+            post {
+                success {
+                    echo "Dependencies installed successfully"
+                }
+                failure {
+                    echo "Something went wrong please try again later"
+                }
 
-        //     }
+            }
 
-        // }
+        }
 
-        // stage("Test&Build"){
-        //     parallel {
-        //         stage("Test") {
+        stage("Test&Build"){
+            parallel {
+                stage("Test") {
 
-        //             steps {
-        //                 sh 'npm run test:unit'
-        //             }
+                    steps {
+                        sh 'npm run test:unit'
+                    }
 
-        //         }
-        //         stage("Build") {
+                }
+                stage("Build") {
 
-        //             steps {
-        //                 sh 'npm run build'
-        //             }
+                    steps {
+                        sh 'npm run build'
+                    }
 
-        //         }
-        //     }
-        // }
+                }
+            }
+        }
 
-        // stage('Sonarqube scan') {
-        //     steps {
-        //         script{
-        //             def sonarScannerHome = tool name: 'sq1', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-        //             withSonarQubeEnv(installationName: "sq1") {
-        //                 sh """
-        //                     ${sonarScannerHome}/bin/sonar-scanner \
-        //                     -Dsonar.projectKey=nodejs \
-        //                     -Dsonar.sources=. \
-        //                     -Dsonar.host.url=${env.SONAR_HOST_URL} \
-        //                     -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
-        //                     -Dsonar.projectName=nodejs \
-        //                 """
-        //             }
-        //         }
-        //    }
-        // }
+        stage('Sonarqube scan') {
+            steps {
+                script{
+                    def sonarScannerHome = tool name: 'sq1', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                    withSonarQubeEnv(installationName: "sq1") {
+                        sh """
+                            ${sonarScannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=nodejs \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=${env.SONAR_HOST_URL} \
+                            -Dsonar.login=${env.SONAR_AUTH_TOKEN} \
+                            -Dsonar.projectName=nodejs \
+                        """
+                    }
+                }
+           }
+        }
 
-        // stage("Sonarqube quality gate check") {
-        //     steps {
-        //         timeout(time: 2, unit: 'MINUTES') {
-        //             waitForQualityGate abortPipeline: true
-        //         }
-        //     }
-        // }
+        stage("Sonarqube quality gate check") {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
-        // stage('Docker Build') {
+        stage('Docker Build') {
 
-        //     steps {
-        //         sh "docker build -t ${DOCKER_IMAGE} ."
-        //     }
-        // }
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE} ."
+            }
+        }
 
         stage('Edit terraform var file') {
             steps {
@@ -155,38 +155,38 @@ pipeline {
             }
         }
 
-        // stage("Smoke test on deployment") {
-        //     when {
-        //         branch 'dev'
-        //     }
+        stage("Smoke test on deployment") {
+            when {
+                branch 'dev'
+            }
 
-        //     steps {
-        //         dir("./terraform/EC2") {
-        //             script {
-        //                 def ecr_repo = sh(script: 'cd ../ECR && terraform output -raw ecr_url', returnStdout: true).trim()
+            steps {
+                dir("./terraform/EC2") {
+                    script {
+                        def ecr_repo = sh(script: 'cd ../ECR && terraform output -raw ecr_url', returnStdout: true).trim()
                         
-        //                 sh """
-        //                     sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" -e "s|ECR_REPO|${ecr_repo}|g" dockerRun-template.sh > dockerRun.sh
-        //                 """
-        //                 sh 'terraform init'
-        //                 sh 'terraform plan'
-        //                 sh 'terraform destroy --auto-approve'
-        //                 sh 'terraform apply --auto-approve'
-        //             }
-        //         }
-        //     }
+                        sh """
+                            sed -e "s|ACCESS_KEY|${ACCESS_KEY}|g" -e "s|SECRET_KEY|${SECRET_KEY}|g" -e "s|IMG_NAME|${DOCKER_IMAGE}|g" -e "s|ECR_REPO|${ecr_repo}|g" dockerRun-template.sh > dockerRun.sh
+                        """
+                        sh 'terraform init'
+                        sh 'terraform plan'
+                        sh 'terraform destroy --auto-approve'
+                        sh 'terraform apply --auto-approve'
+                    }
+                }
+            }
 
-        //     post {
-        //         success {
-        //             echo "Smoke test successful"
-        //         }
+            post {
+                success {
+                    echo "Smoke test successful"
+                }
 
-        //         failure {
-        //             echo "Public IP not available yet. Please wait and try again later."
-        //         }
+                failure {
+                    echo "Public IP not available yet. Please wait and try again later."
+                }
 
-        //     }
-        // }
+            }
+        }
 
 
     }
